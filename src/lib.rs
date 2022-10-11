@@ -51,7 +51,7 @@ pub struct Response {
 }
 
 impl Write {
-    pub fn new(byte_enable: u8, addr: u32, data: u32) -> Self {
+    fn new(byte_enable: u8, addr: u32, data: u32) -> Self {
         Self {
             byte_enable: byte_enable.into(),
             addr,
@@ -62,7 +62,7 @@ impl Write {
 }
 
 impl Read {
-    pub fn new(byte_enable: u8, addr: u32) -> Self {
+    fn new(byte_enable: u8, addr: u32) -> Self {
         Self {
             byte_enable: byte_enable.into(),
             addr,
@@ -71,6 +71,7 @@ impl Read {
     }
 }
 
+/// The state for the SPI Wishbone Bridge
 pub struct SpiWbBridge<SPI> {
     spi: SPI,
 }
@@ -79,10 +80,12 @@ impl<SPI> SpiWbBridge<SPI>
 where
     SPI: spi::Write<u8> + spi::Transfer<u8>,
 {
+    /// Construct a new instance of the bridge, given an SPI instance
     pub fn new(spi: SPI) -> Self {
         Self { spi }
     }
 
+    /// Given a u32 wishbone address, get the 4 byte word data at that address
     pub fn read(&mut self, addr: u32) -> Result<[u8; 4]> {
         let mut payload = [0u8; 14];
         Read::new(0b1111, addr).pack_to_slice(&mut payload)?;
@@ -100,7 +103,8 @@ where
         Ok(resp.read_data.to_ne_bytes())
     }
 
-    pub fn write(&mut self, addr: u32, data: &[u8; 4]) -> Result<Response> {
+    /// Write a 4 byte word `data` at the 32 bit wishbone address
+    pub fn write(&mut self, addr: u32, data: &[u8; 4]) -> Result<()> {
         let mut payload = [0u8; 14];
         Write::new(0b1111, addr, u32::from_ne_bytes(*data)).pack_to_slice(&mut payload)?;
         let resp_payload = match self.spi.transfer(&mut payload) {
@@ -114,11 +118,12 @@ where
         if resp.error {
             bail!(Error::PayloadError);
         }
-        Ok(resp)
+        Ok(())
     }
 }
 
 #[derive(Error, Debug)]
+/// The errors we can return from interacting with the wishbone bridge
 pub enum Error {
     #[error("Response has invalid ack")]
     MissingAck,

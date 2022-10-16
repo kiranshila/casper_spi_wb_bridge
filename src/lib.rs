@@ -86,7 +86,7 @@ where
     }
 
     /// Given a u32 wishbone address, get the 4 byte word data at that address
-    pub fn read(&mut self, addr: u32) -> Result<[u8; 4]> {
+    pub fn read(&mut self, addr: u32) -> Result<u32> {
         let mut payload = [0u8; 14];
         Read::new(0b1111, addr).pack_to_slice(&mut payload)?;
         let resp_payload = match self.spi.transfer(&mut payload) {
@@ -100,13 +100,13 @@ where
         if resp.error {
             bail!(Error::PayloadError);
         }
-        Ok(resp.read_data.to_ne_bytes())
+        Ok(resp.read_data)
     }
 
     /// Write a 4 byte word `data` at the 32 bit wishbone address
-    pub fn write(&mut self, addr: u32, data: &[u8; 4]) -> Result<()> {
+    pub fn write(&mut self, addr: u32, data: u32) -> Result<()> {
         let mut payload = [0u8; 14];
-        Write::new(0b1111, addr, u32::from_ne_bytes(*data)).pack_to_slice(&mut payload)?;
+        Write::new(0b1111, addr, data).pack_to_slice(&mut payload)?;
         let resp_payload = match self.spi.transfer(&mut payload) {
             Ok(x) => x,
             Err(_) => bail!(Error::BadWrite),

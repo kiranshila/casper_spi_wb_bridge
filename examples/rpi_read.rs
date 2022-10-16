@@ -8,11 +8,19 @@ fn main() {
         .expect("RPI SPI aquisition failed");
     let mut bridge = SpiWbBridge::new(spi);
     bridge
-        .write(0x37184, "buhh".as_bytes().try_into().unwrap())
+        .write(
+            0x37184,
+            u32::from_le_bytes("buhh".as_bytes().try_into().unwrap()),
+        )
         .unwrap();
     println!(
         "{}",
-        std::str::from_utf8(&bridge.read(0x37184).expect("SPI reading failed"))
-            .expect("Invalid UTF8")
+        std::str::from_utf8(
+            &bridge
+                .read(0x37184)
+                .expect("SPI reading failed")
+                .to_ne_bytes()
+        )
+        .expect("Invalid UTF8")
     );
 }
